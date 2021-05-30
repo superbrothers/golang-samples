@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"log"
 	"os"
@@ -38,6 +39,7 @@ var (
 	skipVerify   = flag.Bool("skip-verify", false, "Skip server hostname verification in SSL validation [false]")
 	message      = flag.String("message", "Hi there", "The body of the content sent to server")
 	sendUpstream = flag.Bool("relay", false, "Direct ping to relay the request to a ping-upstream service [false]")
+	cacert       = flag.String("cacert", "", "CA certificate file path")
 )
 
 func main() {
@@ -50,9 +52,30 @@ func main() {
 	if *insecure {
 		opts = append(opts, grpc.WithInsecure())
 	} else {
+		roots := x509.NewCertPool()
+
+		if *cacert != "" {
+			rootPEM, err := os.ReadFile(*cacert)
+			if err != nil {
+				panic("failed to read cacert")
+			}
+
+			ok := roots.AppendCertsFromPEM(rootPEM)
+			if !ok {
+				panic("failed to parse root certificate")
+			}
+		}
+
 		cred := credentials.NewTLS(&tls.Config{
 			InsecureSkipVerify: *skipVerify,
+			RootCAs:            roots,
 		})
+
+		if *serverHost != "" {
+			if err := cred.OverrideServerName(*serverHost); err != nil {
+				panic("failed to override server name")
+			}
+		}
 		opts = append(opts, grpc.WithTransportCredentials(cred))
 	}
 
