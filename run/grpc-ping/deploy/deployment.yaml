@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: grpc-ping
+  name: grpc-ping
+spec:
+  selector:
+    matchLabels:
+      app: grpc-ping
+  template:
+    metadata:
+      labels:
+        app: grpc-ping
+    spec:
+      containers:
+      - image: ghcr.io/superbrothers/golang-samples/grpc-ping
+        name: grpc-ping
